@@ -1,0 +1,65 @@
+name: StreamLog CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  integration-tests:
+    name: Integration Suite (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Verify package imports & CLI entry points
+        run: |
+          python -c "from streamlog import Producer, Consumer, config; print(Producer, Consumer)"
+          streamlog-coordinator --help
+          streamlog-broker --help
+
+      - name: Run integration tests (core, partitioning, groups, replication)
+        run: |
+          python -m pytest tests/test_system.py -v --tb=short \
+            -k "not TC19 and not TC20 and not TC21 and not TC22"
+
+  fault-tolerance-tests:
+    name: Fault Tolerance & Failover Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run failover & consumer eviction tests (TC19–TC22)
+        run: |
+          python -m pytest tests/test_system.py -v --tb=short \
+            -k "TC19 or TC20 or TC21 or TC22"

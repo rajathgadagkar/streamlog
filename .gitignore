@@ -1,0 +1,26 @@
+# Python bytecode & caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Packaging & virtual environments
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Runtime broker data & cluster PID files
+data/
+.streamlog_pids
+*.log
+
+# OS & editor artifacts
+.DS_Store
+.vscode/
+.idea/
+*.swp
