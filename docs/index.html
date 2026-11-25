@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StreamLog — Distributed Kafka-Inspired Pub-Sub Engine</title>
+  <meta name="description" content="Interactive cluster simulator, architecture explorer, and benchmark dashboard for StreamLog — a fault-tolerant, Kafka-inspired distributed pub-sub messaging engine in pure Python." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="nav">
+    <div class="container nav-inner">
+      <a href="#top" class="brand">
+        <span class="brand-dot"></span>
+        <span>StreamLog</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#simulator">Live Simulator</a>
+        <a href="#protocol">Wire Protocol</a>
+        <a href="#benchmarks">Benchmarks</a>
+        <a href="#tests">Test Suite</a>
+        <a href="#quickstart">Quick Start</a>
+        <a id="repo-link-nav" href="#" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top" class="container">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="pill-row">
+        <span class="pill cyan">Pure Python · 0 Runtime Dependencies</span>
+        <span class="pill emerald">46/46 Real-Process Integration Tests</span>
+        <span class="pill violet">Async Replication &amp; Auto-Failover</span>
+      </div>
+      <h1>StreamLog</h1>
+      <p>
+        A fault-tolerant, Kafka-inspired distributed publish-subscribe messaging engine built from scratch in Python — featuring partitioned topics, segmented append-only logs, consumer groups, fan-out subscriptions, and automatic replica promotion.
+      </p>
+      <div class="cta-row">
+        <a href="#simulator" class="btn primary">Launch Cluster Simulator</a>
+        <a href="#quickstart" class="btn">Quick Start &amp; API</a>
+        <a id="repo-link-hero" href="#" target="_blank" rel="noopener" class="btn">View Source on GitHub</a>
+      </div>
+    </section>
+
+    <!-- KPI Strip -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-value cyan">3.60 ms</div>
+        <div class="kpi-label">Mean End-to-End Latency (2,000 samples)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value emerald">619 msg/s</div>
+        <div class="kpi-label">Peak Multi-Broker Throughput (+35% vs 1 broker)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value amber">O(log n)</div>
+        <div class="kpi-label">Binary-Search Seek on Segmented Partition Logs</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value violet">46 Tests</div>
+        <div class="kpi-label">25 Real-Process TCP Integration Test Classes</div>
+      </div>
+    </div>
+
+    <!-- Interactive Simulator -->
+    <section id="simulator">
+      <div class="section-header">
+        <div class="section-eyebrow">Interactive Demo</div>
+        <h2>Live Cluster Simulator</h2>
+        <p>
+          Produce keyed or keyless messages to topic <code>orders</code> (3 partitions), kill brokers to watch automatic replica promotion, add or evict consumers to trigger rebalancing, and poll/commit offsets in real time.
+        </p>
+      </div>
+
+      <div class="sim-shell">
+        <div class="sim-controls">
+          <input id="msg-payload" class="sim-input" type="text" value="order_id=ORD-1001 product=Laptop price=1499" placeholder="Message payload..." />
+          <input id="msg-key" class="sim-input" type="text" placeholder="Optional routing key (e.g. user-42)" />
+          <button id="btn-produce" class="btn primary">Produce Message</button>
+          <button id="btn-burst" class="btn">Burst 6 Orders</button>
+        </div>
+
+        <div class="sim-grid">
+          <!-- Brokers & Coordinator -->
+          <div class="sim-panel">
+            <h3>
+              <span>Cluster Nodes (TCP :9000–9003)</span>
+              <span class="status-badge ok" id="coord-status">COORD ONLINE</span>
+            </h3>
+            <div class="broker-list" id="broker-list"></div>
+          </div>
+
+          <!-- Partitions & Consumer Groups -->
+          <div class="sim-panel">
+            <h3>
+              <span>Consumer Groups &amp; Offset Tracking</span>
+              <div style="display:flex; gap:6px;">
+                <button id="btn-poll-commit" class="btn sm success">Poll &amp; Commit</button>
+                <button id="btn-poll-nocommit" class="btn sm">Poll (No Commit)</button>
+                <button id="btn-reset" class="btn sm danger">Reset</button>
+              </div>
+            </h3>
+
+            <div class="part-chips" id="partition-summary" style="margin-bottom:10px;"></div>
+
+            <div class="consumer-groups" id="consumer-groups"></div>
+
+            <div class="wire-log" id="wire-log" aria-live="polite"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Wire Protocol Inspector -->
+    <section id="protocol">
+      <div class="section-header">
+        <div class="section-eyebrow">Internals</div>
+        <h2>Length-Prefixed Wire Protocol Inspector</h2>
+        <p>
+          Every node-to-node and client-to-node TCP message uses a 4-byte big-endian unsigned integer header (<code>&gt;I</code>) followed by UTF-8 JSON. Edit the payload below to inspect the exact bytes StreamLog sends over the wire.
+        </p>
+      </div>
+
+      <div class="frame-box">
+        <div>
+          <label for="wire-json" style="display:block; font-size:0.82rem; color:var(--text-muted); margin-bottom:6px;">JSON Message Payload</label>
+          <textarea id="wire-json" class="sim-input" rows="5" style="width:100%; resize:vertical;">{"type": "PRODUCE", "topic": "orders", "partition": 1, "key": "user-42", "message": "ORD-1001"}</textarea>
+        </div>
+        <div>
+          <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:var(--text-muted); margin-bottom:6px;">
+            <span>Framed TCP Bytes (<span style="color:var(--cyan);">4B Length</span> + <span style="color:var(--emerald);">UTF-8 Payload</span>)</span>
+            <span id="wire-byte-count" style="font-family:var(--font-mono); color:#fff;"></span>
+          </div>
+          <div id="wire-hex" class="hex-dump"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Benchmarks -->
+    <section id="benchmarks">
+      <div class="section-header">
+        <div class="section-eyebrow">Empirical Performance</div>
+        <h2>Benchmarks &amp; Scalability Charts</h2>
+        <p>
+          Measured on a local multi-broker StreamLog cluster via <code>benchmark/benchmark.py</code> and plotted with <code>benchmark/plot_benchmarks.py</code>. Click any chart to zoom.
+        </p>
+      </div>
+
+      <div class="chart-grid">
+        <article class="chart-card">
+          <img src="assets/latency_distribution.png" alt="End-to-End Latency Distribution" />
+          <div class="chart-caption">
+            <h3>End-to-End Latency Distribution</h3>
+            <p>Mean round-trip produce-to-consume latency of <strong>3.60 ms</strong> across 2,000 samples with a tight unimodal distribution.</p>
+          </div>
+        </article>
+        <article class="chart-card">
+          <img src="assets/throughput_vs_brokers.png" alt="Throughput vs Broker Count" />
+          <div class="chart-caption">
+            <h3>Horizontal Scalability (1 to 5 Brokers)</h3>
+            <p>Throughput climbs from <strong>459 msg/s</strong> (1 broker) to <strong>619 msg/s</strong> (2 brokers) and sustains ~600+ msg/s across up to 5 brokers.</p>
+          </div>
+        </article>
+        <article class="chart-card">
+          <img src="assets/throughput_vs_msgsize.png" alt="Throughput vs Message Size" />
+          <div class="chart-caption">
+            <h3>Payload Scalability (64 B to 64 KB)</h3>
+            <p>Message rate transitions smoothly from <strong>~578 msg/s</strong> at 64 B to <strong>~262 msg/s</strong> at 64 KB while raw byte throughput increases dramatically.</p>
+          </div>
+        </article>
+        <article class="chart-card">
+          <img src="assets/throughput_vs_partitions.png" alt="Throughput vs Partition Count" />
+          <div class="chart-caption">
+            <h3>Partition Scaling (1 to 9 Partitions)</h3>
+            <p>Sustains <strong>555–597 msg/s</strong> across 1, 3, 6, and 9 partitions with balanced round-robin sharding.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Test Coverage -->
+    <section id="tests">
+      <div class="section-header">
+        <div class="section-eyebrow">Verification &amp; CI</div>
+        <h2>46 Real-Process Integration Tests</h2>
+        <p>
+          Every test class boots real Coordinator and Broker OS processes on isolated high ports (<code>19000–19004</code>) over real TCP sockets — zero mocks. Automated in GitHub Actions across Python 3.10, 3.11, and 3.12.
+        </p>
+      </div>
+
+      <div class="filter-bar" id="test-filters"></div>
+      <div class="test-grid" id="test-grid"></div>
+    </section>
+
+    <!-- Quick Start & API -->
+    <section id="quickstart">
+      <div class="section-header">
+        <div class="section-eyebrow">Get Started</div>
+        <h2>Quick Start &amp; Client API</h2>
+        <p>Zero external runtime dependencies — clone, install editable, start a 3-broker cluster, and stream messages in seconds.</p>
+      </div>
+
+      <div class="code-shell">
+        <div class="tab-bar">
+          <div class="tabs" id="code-tabs"></div>
+          <button id="btn-copy-code" class="btn sm">Copy</button>
+        </div>
+        <pre class="code-block"><code id="code-display"></code></pre>
+      </div>
+    </section>
+  </main>
+
+  <div id="lightbox" class="lightbox" role="dialog" aria-label="Chart zoom">
+    <img id="lightbox-img" src="" alt="Zoomed benchmark chart" />
+  </div>
+
+  <footer>
+    <div class="container">
+      <p><strong>StreamLog</strong> — Built by <strong>Rajath Gadagkar</strong> (<a href="mailto:rajathgadagkar@gmail.com">rajathgadagkar@gmail.com</a>)</p>
+      <p style="margin-top:6px; font-size:0.82rem; color:var(--text-dim);">MIT License · Pure Python Distributed Event Streaming</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
